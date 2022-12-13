@@ -113,18 +113,20 @@ struct PhotoPicker: View {
     
     private func onSelectedPhoto(newItem: PhotosPickerItem?) {
         newItem?.loadTransferable(type: Data.self) { result in
-            switch result {
-            case .success(let success):
-                guard let data: Data = success  else {
-                    return
-                }
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let success):
+                    guard let data: Data = success  else {
+                        return
+                    }
 
-                guard let image_: UIImage = UIImage(data: data) else {
+                    guard let image_: UIImage = UIImage(data: data) else {
+                        return
+                    }
+                    image = image_
+                default:
                     return
                 }
-                image = image_
-            default:
-                return
             }
         }
     }

@@ -16,7 +16,7 @@ extension View{
 }
 
 struct ContentView: View {
-    @State var library = Library()
+    @EnvironmentObject var library: Library
     @State var isAddingNewBookSheetDisplayed = false
     
     var body: some View {
@@ -41,30 +41,30 @@ struct ContentView: View {
                     .alignedItem()
                     .sheet(isPresented: $isAddingNewBookSheetDisplayed){
                         BookCreationView()
+                            .ignoresSafeArea(.keyboard)
                     }
                     
-                    ForEach(library.sortedBooks) { book in
-                        BookRow(book: book, image: $library.booksImages[book])
-                            .alignedItem()
+                    ForEach(SectionOption.allCases, id: \.self) {
+                        SectionView(section: $0)
                     }
-                
                 }
+                .listStyle(.insetGrouped)
+                .toolbar(content: EditButton.init)
             }
             .navigationTitle("My Library")
         }
-        .listStyle(PlainListStyle())
         
     }
 }
 
-struct BookRow: View {
+private struct BookRow: View {
     @ObservedObject var book: Book
-    @Binding var image: UIImage?
+    @EnvironmentObject var library: Library
     
     var body: some View {
-        NavigationLink(destination: BookDetailView(book: book, image: $image)) {
+        NavigationLink(destination: BookDetailView(book: book).ignoresSafeArea(.keyboard)) {
             HStack {
-                Book.Image(image: image, title: book.title, size: 80, cornerRadius: 12)
+                Book.Image(image: library.booksImages[book], title: book.title, size: 80, cornerRadius: 12)
                 VStack(alignment: .leading) {
                     TitleAndAuthorStack(book: book, titleFont: .title2, authorFont: .title3)
                         .lineLimit(1)
@@ -83,8 +83,76 @@ struct BookRow: View {
     }
 }
 
+private struct SectionView: View {
+    let section: SectionOption
+    @EnvironmentObject var library: Library
+    var title: String {
+        switch section {
+        case .readMe:
+            return "Reading"
+        case .finished:
+            return "Finished"
+        }
+    }
+    
+    var body: some View {
+        if let books = library.sortedBooks[section]{
+            Section {
+                ForEach(books) { book in
+                    BookRow(book: book)
+                        .swipeActions(edge: .leading){
+                            Button {
+                                withAnimation{
+                                    book.readMe.toggle()
+                                    library.sortBooks()
+                                }
+                            } label: {
+                                book.readMe
+                                ? Label("Mark finished", systemImage: "bookmark.slash")
+                                : Label("Unmark finished", systemImage: "bookmark")
+                            }
+                            .tint(.accentColor)
+                        }
+                        .swipeActions(edge: .trailing){
+                            Button(role: .destructive){
+                                guard let index = books.firstIndex(where: {$0.id == book.id}) else {return}
+                                
+                                withAnimation{
+                                    library.deleteBook(atOffsets: .init(integer:index), section: section)
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                }
+                .onDelete{ indexSet in
+                    library.deleteBook(atOffsets: indexSet, section: section)
+                }
+                .onMove { indexes, newOffset in
+                    library.moveBooks(oldOffsets: indexes, newOffset: newOffset, section: section)
+                }
+                .labelStyle(.iconOnly)
+            } header: {
+                ZStack{
+                    Image("BookTexture")
+                        .resizable()
+                        .scaledToFit()
+                    Text(title)
+                        .font(.custom("American Typewriter", size:24))
+                        .foregroundColor(.primary)
+                        .textCase(.uppercase)
+                }
+                .listRowInsets(.init())
+                .cornerRadius(5)
+            }
+        }
+    }
+}
+
+
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .environmentObject(Library())
     }
 }

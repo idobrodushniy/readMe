@@ -9,10 +9,10 @@ import SwiftUI
 import PhotosUI
 struct BookDetailView: View {
     @ObservedObject var book: Book
-    @Binding var image: UIImage?
+    @EnvironmentObject var library: Library
     
     var body: some View {
-        return VStack{
+        VStack{
             VStack(alignment: .leading) {
                 HStack {
                     Button {
@@ -20,6 +20,10 @@ struct BookDetailView: View {
                     } label: {
                         Image(systemName: book.readMe ? "bookmark.fill":"bookmark")
                             .font(.system(size:48, weight:.light))
+                    }.onDisappear{
+                        withAnimation{
+                            library.sortBooks()
+                        }
                     }
                     
                     TitleAndAuthorStack(
@@ -33,10 +37,10 @@ struct BookDetailView: View {
                 TextField("Review...", text: $book.microReview)
                 Divider()
                     .padding(.vertical)
-                Book.Image(image: image, title: book.title, cornerRadius: 16)
+                Book.Image(image: library.booksImages[book], title: book.title, cornerRadius: 16)
                     .scaledToFit()
             }
-            PhotoPicker(image: $image, title: $book.title)
+            PhotoPicker(image: $library.booksImages[book], title: $book.title)
             Spacer()
         }
         .padding()
@@ -45,15 +49,16 @@ struct BookDetailView: View {
 
 
 struct ExtraPreviewTestView: View {
-    @State var image: UIImage?
+    @EnvironmentObject var library: Library
     
     var body: some View {
-        BookDetailView(book: Book(title: "Ein Neues Land", author: "Shaun Tan", microReview: "Delightful!"), image: $image)
+        BookDetailView(book: Book(title: "Ein Neues Land", author: "Shaun Tan", microReview: "Delightful!"))
     }
 }
 
 struct BookDetailView_Previews: PreviewProvider {
     static var previews: some View {
         ExtraPreviewTestView()
+            .environmentObject(Library())
     }
 }

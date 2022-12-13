@@ -9,28 +9,43 @@ import Foundation
 import SwiftUI
 
 struct BookCreationView: View {
-    @State var title: String = ""
-    @State var author: String = ""
-    @State var review: String = ""
+    @ObservedObject var book: Book = Book(title:"", author: "", microReview: "")
+    @EnvironmentObject var library: Library
     @State var image: UIImage?
+    @Environment(\.dismiss) var dismiss
     
     var body: some View{
-        VStack{
-            VStack(alignment: .leading) {
-                TextField("Title", text:$title)
-                    .padding(.bottom)
-                TextField("Author", text: $author)
-                    .padding(.bottom)
-                Divider()
-                    .padding(.vertical)
-                TextField("Review...", text: $review)
-                Divider()
-                    .padding(.vertical)
-                Book.Image(image: image, title: title, cornerRadius: 16)
-                    .scaledToFit()
+        NavigationStack{
+            VStack(alignment: .leading){
+                Text("Got a new book?")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .font(.title)
+                    .bold()
+                VStack(alignment: .leading) {
+                    TextField("Title", text:$book.title)
+                        .padding(.bottom)
+                    TextField("Author", text: $book.author)
+                        .padding(.bottom)
+                    Divider()
+                        .padding(.vertical)
+                    TextField("Review...", text: $book.microReview)
+                    Divider()
+                        .padding(.vertical)
+                    Book.Image(image: image, title: book.title, cornerRadius: 16)
+                        .scaledToFit()
+                }
+                PhotoPicker(image: $image, title: $book.title)
+                Spacer()
+            }.ignoresSafeArea(.keyboard)
+            
+            .toolbar {
+                ToolbarItem(placement: .status) {
+                    Button("Add to Library") {
+                        library.addNewNook(book: book, image: image)
+                        dismiss()
+                    }
+                }
             }
-            PhotoPicker(image: $image, title: $title)
-            Spacer()
         }
         .padding()
     }
@@ -39,5 +54,7 @@ struct BookCreationView: View {
 struct BookCreationView_Previews: PreviewProvider {
     static var previews: some View {
         BookCreationView()
+            .environmentObject(Library())
+        
     }
 }
